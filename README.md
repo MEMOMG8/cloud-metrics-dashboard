@@ -1,7 +1,7 @@
 # CloudMetrics Dashboard
 
 A serverless monitoring dashboard that pulls real AWS metrics and displays them in a live-updating UI. Built entirely on AWS Free Tier — Lambda handles the backend, API Gateway exposes it over HTTPS, S3 hosts the frontend, and CloudWatch is where the actual data comes from.
-<img width="1168" height="902" alt="image" src="https://github.com/user-attachments/assets/c4d00eb9-dbf7-4152-8084-e337754d9069" />
+<img width="1089" height="892" alt="image" src="https://github.com/user-attachments/assets/5f69f513-f854-4d27-8bf7-47a32d6c53e3" />
 
 ```
 • Built a serverless AWS monitoring dashboard using Lambda (Python), API Gateway,
