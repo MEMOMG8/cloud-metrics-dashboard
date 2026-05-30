@@ -2,6 +2,24 @@
 
 A serverless cloud monitoring dashboard built with AWS Free Tier services. Demonstrates core cloud engineering concepts: serverless compute, object storage, API management, and observability.
 
+```
+Live Demo: http://manuelp-metrics-dashboard.s3-website-us-east-1.amazonaws.com/
+<img width="1894" height="903" alt="image" src="https://github.com/user-attachments/assets/e9290ee5-aafa-444e-befe-7562c613ae2a" />
+
+• Built a serverless AWS monitoring dashboard using Lambda (Python), API Gateway,
+  S3 static hosting, and CloudWatch — deployed entirely within the AWS Free Tier.
+
+• Designed and implemented a RESTful API with AWS API Gateway + Lambda proxy
+  integration, including CORS handling and structured JSON responses consumed
+  by a vanilla JS frontend hosted on S3.
+
+• Integrated AWS CloudWatch to capture Lambda invocation metrics, error rates,
+  and execution duration; surfaced real-time observability data on a live web dashboard
+  with 30-second auto-refresh.
+
+• Authored an end-to-end AWS CLI deployment script (deploy.sh) automating S3 bucket
+  provisioning, public access policies, static website hosting configuration,
+  and Lambda function packaging — reducing manual setup to 4 console steps.
 ---
 
 ## Architecture
@@ -243,41 +261,6 @@ curl https://YOUR_INVOKE_URL/prod/metrics | python -m json.tool
 | CloudWatch | 5 GB logs/month | ~10 MB logs | **$0.00** |
 | **Total** | | | **$0.00** |
 
----
 
-## Resume Bullet Points
 
-Copy these directly onto your resume under a "Projects" section:
 
-```
-• Built a serverless AWS monitoring dashboard using Lambda (Python), API Gateway,
-  S3 static hosting, and CloudWatch — deployed entirely within the AWS Free Tier.
-
-• Designed and implemented a RESTful API with AWS API Gateway + Lambda proxy
-  integration, including CORS handling and structured JSON responses consumed
-  by a vanilla JS frontend hosted on S3.
-
-• Integrated AWS CloudWatch to capture Lambda invocation metrics, error rates,
-  and execution duration; surfaced real-time observability data on a live web dashboard
-  with 30-second auto-refresh.
-
-• Authored an end-to-end AWS CLI deployment script (deploy.sh) automating S3 bucket
-  provisioning, public access policies, static website hosting configuration,
-  and Lambda function packaging — reducing manual setup to 4 console steps.
-```
-
----
-
-## Architecture Decisions (Interview Talking Points)
-
-**Why Lambda over EC2?**
-No idle cost. EC2 would run 24/7 even with zero traffic. Lambda charges only per invocation — perfect for a dashboard that gets polled every 30 seconds.
-
-**Why S3 for the frontend?**
-Zero server maintenance. S3 static website hosting serves files from AWS's global infrastructure without managing Nginx, certificates, or uptime. Same approach used by companies like Netflix for static assets.
-
-**Why API Gateway?**
-It handles authentication, rate limiting, TLS termination, and CORS — things I'd have to build myself with a custom server. It also provides a stable URL even if the Lambda function is redeployed or renamed.
-
-**Why CloudWatch?**
-It's the native AWS observability layer — already integrated with every AWS service. Using it avoids installing third-party agents and keeps the stack entirely within AWS's managed ecosystem.
