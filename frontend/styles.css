@@ -1,0 +1,395 @@
+/* ============================================================
+   styles.css — CloudMetrics Dashboard
+   AWS Service: S3 (Static Website Hosting)
+   Why S3: Serves HTML/CSS/JS files globally, no web server needed.
+           Costs ~$0.023/GB stored — nearly free for a portfolio project.
+   ============================================================ */
+
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0d1117;
+  --surface:     #161b22;
+  --surface-2:   #1c2230;
+  --border:      #30363d;
+  --accent:      #00d4ff;
+  --accent-dim:  #0099bb;
+  --green:       #3fb950;
+  --yellow:      #e3b341;
+  --red:         #f85149;
+  --text:        #c9d1d9;
+  --text-dim:    #8b949e;
+  --text-bright: #f0f6fc;
+  --radius:      10px;
+  --shadow:      0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+html { font-size: 15px; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── Layout ────────────────────────────────────────────────── */
+.app-wrapper { max-width: 1100px; margin: 0 auto; padding: 24px 20px 48px; }
+
+/* ── Header ────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.header-left h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: -0.3px;
+}
+
+.header-left h1 span { color: var(--accent); }
+
+.header-left p {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Status badge */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-badge.healthy  { background: rgba(63,185,80,.12); border-color: rgba(63,185,80,.3); color: var(--green); }
+.status-badge.warning  { background: rgba(227,179,65,.12); border-color: rgba(227,179,65,.3); color: var(--yellow); }
+.status-badge.critical { background: rgba(248,81,73,.12); border-color: rgba(248,81,73,.3); color: var(--red); }
+.status-badge.loading  { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.2); color: var(--accent); }
+
+.status-badge.healthy  .status-dot { background: var(--green); }
+.status-badge.warning  .status-dot { background: var(--yellow); }
+.status-badge.critical .status-dot { background: var(--red); }
+.status-badge.loading  .status-dot { background: var(--accent); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* Refresh countdown */
+.refresh-info {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.refresh-info .countdown {
+  display: block;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ── Section labels ────────────────────────────────────────── */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+/* ── System Metric Cards Grid ──────────────────────────────── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.metric-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+
+.metric-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.metric-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.metric-icon { font-size: 1.2rem; }
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-bright);
+  line-height: 1;
+  margin-bottom: 12px;
+  transition: color 0.3s;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-value .unit {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+/* Progress bar */
+.progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease, background-color 0.3s;
+  background: var(--accent);
+}
+
+.progress-bar-fill.warn  { background: var(--yellow); }
+.progress-bar-fill.crit  { background: var(--red); }
+
+.metric-sub {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* Network card — two values side by side */
+.network-pair {
+  display: flex;
+  gap: 20px;
+}
+
+.network-item { flex: 1; }
+.network-label { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 2px; }
+.network-val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  font-variant-numeric: tabular-nums;
+}
+.network-val .unit { font-size: 0.7rem; color: var(--text-dim); }
+
+/* ── Lambda Stats Panel ────────────────────────────────────── */
+.lambda-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.lambda-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lambda-panel-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.lambda-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.25);
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.lambda-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.lambda-stat {
+  text-align: center;
+  padding: 14px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.lambda-stat-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-bright);
+  line-height: 1;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lambda-stat-val.good   { color: var(--green); }
+.lambda-stat-val.warn   { color: var(--yellow); }
+.lambda-stat-val.crit   { color: var(--red); }
+
+.lambda-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── History Chart ─────────────────────────────────────────── */
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.chart-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-panel-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+.legend-dot.cpu { background: var(--accent); }
+.legend-dot.mem { background: var(--green); }
+
+canvas#history-chart {
+  width: 100%;
+  height: 130px;
+  display: block;
+}
+
+/* ── Footer bar ────────────────────────────────────────────── */
+.footer-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.footer-item strong { color: var(--text); }
+
+/* ── Error Banner ──────────────────────────────────────────── */
+.error-banner {
+  display: none;
+  background: rgba(248,81,73,0.1);
+  border: 1px solid rgba(248,81,73,0.35);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+}
+
+.error-banner.visible { display: block; }
+
+/* ── Loading skeleton ──────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 4px;
+  color: transparent !important;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  header { flex-direction: column; gap: 14px; text-align: center; }
+  .header-right { flex-direction: row; justify-content: center; }
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+  .lambda-stats-grid { grid-template-columns: 1fr 1fr; }
+}

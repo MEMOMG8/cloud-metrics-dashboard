@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<!--
+  index.html — CloudMetrics Dashboard
+  =====================================
+  AWS Service: S3 (Simple Storage Service) — Static Website Hosting
+  Why S3: Serves this HTML file to browsers worldwide from AWS's CDN infrastructure.
+          No web server, no EC2 instance, no maintenance. ~$0.023/GB/month.
+
+  How this page gets to users:
+    1. You upload this file to an S3 bucket with static website hosting enabled.
+    2. S3 gives you a public URL (e.g. http://my-bucket.s3-website-us-east-1.amazonaws.com).
+    3. Users visit that URL; S3 serves this file directly from object storage.
+    4. The JavaScript in app.js calls API Gateway to fetch live metrics.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloudMetrics Dashboard</title>
+
+  <!-- Hosted on S3: CSS and JS files are separate S3 objects fetched by the browser -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── Error Banner (hidden by default, shown by app.js on fetch failure) ── -->
+  <div id="error-banner" class="error-banner" role="alert"></div>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="header-left">
+      <h1>&#9729; Cloud<span>Metrics</span></h1>
+      <p>Serverless monitoring with AWS Lambda &amp; CloudWatch</p>
+    </div>
+    <div class="header-right">
+      <!-- Status badge — updated by app.js based on metric thresholds -->
+      <div id="status-badge" class="status-badge loading">
+        <span class="status-dot"></span>
+        <span id="status-text">LOADING</span>
+      </div>
+      <div class="refresh-info">
+        Auto-refresh in
+        <span id="countdown" class="countdown">30s</span>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ── System Metrics ──────────────────────────────────────────────────── -->
+  <!--
+    These metrics are generated in the Lambda function (metrics_collector.py)
+    and returned as JSON through API Gateway. app.js fetches and renders them.
+    In production, they'd come from CloudWatch Agent running on EC2/ECS instances.
+  -->
+  <p class="section-label">System Metrics (Simulated)</p>
+
+  <div class="metrics-grid">
+
+    <!-- CPU Card -->
+    <div class="metric-card">
+      <div class="metric-card-header">
+        <span class="metric-name">CPU Usage</span>
+        <span class="metric-icon">&#128187;</span>
+      </div>
+      <div class="metric-value">
+        <span id="cpu-value">—</span><span class="unit">%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div id="cpu-bar" class="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div id="cpu-sub" class="metric-sub">Loading…</div>
+    </div>
+
+    <!-- Memory Card -->
+    <div class="metric-card">
+      <div class="metric-card-header">
+        <span class="metric-name">Memory Usage</span>
+        <span class="metric-icon">&#128190;</span>
+      </div>
+      <div class="metric-value">
+        <span id="mem-value">—</span><span class="unit">%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div id="mem-bar" class="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="metric-sub">RAM utilisation</div>
+    </div>
+
+    <!-- Disk Card -->
+    <div class="metric-card">
+      <div class="metric-card-header">
+        <span class="metric-name">Disk Usage</span>
+        <span class="metric-icon">&#128196;</span>
+      </div>
+      <div class="metric-value">
+        <span id="disk-value">—</span><span class="unit">%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div id="disk-bar" class="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="metric-sub">Primary volume utilisation</div>
+    </div>
+
+    <!-- Network Card -->
+    <div class="metric-card">
+      <div class="metric-card-header">
+        <span class="metric-name">Network I/O</span>
+        <span class="metric-icon">&#127760;</span>
+      </div>
+      <div class="network-pair">
+        <div class="network-item">
+          <div class="network-label">&#8595; Inbound</div>
+          <div class="network-val"><span id="net-in">—</span><span class="unit"> Mbps</span></div>
+        </div>
+        <div class="network-item">
+          <div class="network-label">&#8593; Outbound</div>
+          <div class="network-val"><span id="net-out">—</span><span class="unit"> Mbps</span></div>
+        </div>
+      </div>
+      <div id="latency-val" class="metric-sub" style="margin-top:14px">Loading…</div>
+    </div>
+
+  </div><!-- /metrics-grid -->
+
+
+  <!-- ── Lambda Performance Panel ────────────────────────────────────────── -->
+  <!--
+    AWS Lambda + CloudWatch integration:
+    Lambda automatically publishes these metrics to CloudWatch every minute:
+      • Invocations  — total function calls
+      • Errors       — failed invocations (exceptions, timeouts)
+      • Duration     — average execution time in milliseconds
+      • Throttles    — requests rejected because concurrency limit was hit
+
+    The Lambda function uses boto3 (AWS SDK) to read these back via the
+    CloudWatch GetMetricStatistics API, then includes them in the JSON response.
+  -->
+  <p class="section-label">Lambda Performance &mdash; Last 24 Hours</p>
+
+  <div class="lambda-panel">
+    <div class="lambda-panel-header">
+      <h2>AWS Lambda Metrics</h2>
+      <span class="lambda-badge">CloudWatch</span>
+    </div>
+
+    <div class="lambda-stats-grid">
+
+      <div class="lambda-stat">
+        <div id="lam-invocations" class="lambda-stat-val">—</div>
+        <div class="lambda-stat-label">Invocations</div>
+      </div>
+
+      <div class="lambda-stat">
+        <div id="lam-errors" class="lambda-stat-val">—</div>
+        <div class="lambda-stat-label">Errors</div>
+      </div>
+
+      <div class="lambda-stat">
+        <div id="lam-errrate" class="lambda-stat-val good">—</div>
+        <div class="lambda-stat-label">Error Rate</div>
+      </div>
+
+      <div class="lambda-stat">
+        <div id="lam-duration" class="lambda-stat-val">—</div>
+        <div class="lambda-stat-label">Avg Duration</div>
+      </div>
+
+      <div class="lambda-stat">
+        <div id="lam-throttles" class="lambda-stat-val">—</div>
+        <div class="lambda-stat-label">Throttles</div>
+      </div>
+
+    </div>
+  </div><!-- /lambda-panel -->
+
+
+  <!-- ── History Chart ───────────────────────────────────────────────────── -->
+  <!--
+    This chart is drawn with the native HTML5 Canvas API (no library needed).
+    It plots the last 15 readings of CPU % and Memory % captured during this
+    browser session. Data is stored in JavaScript arrays — not persisted to AWS.
+    For real persistence you could write to DynamoDB or S3 from Lambda.
+  -->
+  <p class="section-label">Resource History (Current Session)</p>
+
+  <div class="chart-panel">
+    <div class="chart-panel-header">
+      <h2>CPU &amp; Memory Trend</h2>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot cpu"></div> CPU %</div>
+        <div class="legend-item"><div class="legend-dot mem"></div> Memory %</div>
+      </div>
+    </div>
+    <!-- Canvas element sized by CSS; JavaScript scales it for pixel density -->
+    <canvas id="history-chart" aria-label="CPU and Memory history chart"></canvas>
+  </div>
+
+
+  <!-- ── Footer (Lambda Runtime Metadata) ────────────────────────────────── -->
+  <!--
+    These values come from the Lambda `context` object, which gives us
+    runtime info injected by AWS: function name, memory allocation, and
+    how many milliseconds remain before the function times out.
+  -->
+  <div class="footer-bar">
+    <span>Region: <strong id="meta-region">—</strong></span>
+    <span>Lambda Memory: <strong id="meta-memory">—</strong></span>
+    <span>Remaining Time: <strong id="meta-remaining">—</strong></span>
+    <span>Last Refresh: <strong id="meta-timestamp">—</strong></span>
+    <span style="margin-left:auto; color:#4a5568;">
+      S3 &#8594; API Gateway &#8594; Lambda &#8594; CloudWatch
+    </span>
+  </div>
+
+</div><!-- /app-wrapper -->
+
+<!--
+  app.js is the last script loaded so all DOM elements above are available.
+  It is also a separate S3 object — browsers cache it independently of index.html.
+-->
+<script src="app.js"></script>
+
+</body>
+</html>
