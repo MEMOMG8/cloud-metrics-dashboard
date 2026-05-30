@@ -1,11 +1,9 @@
 # CloudMetrics Dashboard
 
-A serverless cloud monitoring dashboard built with AWS Free Tier services. Demonstrates core cloud engineering concepts: serverless compute, object storage, API management, and observability.
+A serverless monitoring dashboard that pulls real AWS metrics and displays them in a live-updating UI. Built entirely on AWS Free Tier — Lambda handles the backend, API Gateway exposes it over HTTPS, S3 hosts the frontend, and CloudWatch is where the actual data comes from.
+<img width="1168" height="902" alt="image" src="https://github.com/user-attachments/assets/c4d00eb9-dbf7-4152-8084-e337754d9069" />
 
 ```
-Live Demo: http://manuelp-metrics-dashboard.s3-website-us-east-1.amazonaws.com/
-<img width="1894" height="903" alt="image" src="https://github.com/user-attachments/assets/e9290ee5-aafa-444e-befe-7562c613ae2a" />
-
 • Built a serverless AWS monitoring dashboard using Lambda (Python), API Gateway,
   S3 static hosting, and CloudWatch — deployed entirely within the AWS Free Tier.
 
@@ -20,6 +18,7 @@ Live Demo: http://manuelp-metrics-dashboard.s3-website-us-east-1.amazonaws.com/
 • Authored an end-to-end AWS CLI deployment script (deploy.sh) automating S3 bucket
   provisioning, public access policies, static website hosting configuration,
   and Lambda function packaging — reducing manual setup to 4 console steps.
+```
 ---
 
 ## Architecture
@@ -85,43 +84,41 @@ cloud-metrics-dashboard/
 
 ## Prerequisites
 
-- [AWS Account](https://aws.amazon.com/free/) (Free Tier is sufficient)
-- [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) — configured with `aws configure`
-- Python 3.8+ (for the simulation script)
-- Git Bash or WSL (Windows) to run deploy.sh
+- [AWS Account](https://aws.amazon.com/free/) — Free Tier is enough for this whole project
+- [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) — run `aws configure` after installing
+- Python 3.8+
+- Git Bash or WSL if you're on Windows (the deploy script is bash)
 
 ---
-
 ## Setup Guide
+
+The first three steps have to be done manually in the AWS Console — they involve IAM permissions and service linking that can't be scripted without extra setup. After that, `deploy.sh` handles everything else.
 
 ### Step 1 — Create an IAM Role for Lambda
 
-Lambda needs permission to read CloudWatch metrics. Do this once in the AWS Console.
+Lambda needs permission to read from CloudWatch and write its own logs. You only do this once.
 
 1. Go to **IAM → Roles → Create role**
 2. Trusted entity type: **AWS service** → Use case: **Lambda** → Next
-3. Attach these policies:
-   - `CloudWatchReadOnlyAccess` (read metrics from CloudWatch)
-   - `AWSLambdaBasicExecutionRole` (write logs to CloudWatch Logs)
+3. Attach these two policies:
+   - `CloudWatchReadOnlyAccess`
+   - `AWSLambdaBasicExecutionRole`
 4. Role name: `lambda-metrics-role` → **Create role**
-5. Copy the **Role ARN** — you'll need it in Step 3.
 
 ---
 
 ### Step 2 — Create the Lambda Function
 
-1. Go to **Lambda → Create function**
-2. Select **Author from scratch**
-3. Settings:
+1. Go to **Lambda → Create function → Author from scratch**
+2. Fill in:
    - Function name: `metrics-collector`
    - Runtime: **Python 3.12**
    - Execution role: **Use an existing role** → select `lambda-metrics-role`
-4. Click **Create function**
-5. In the **Code** tab, replace the default code with the contents of `lambda/metrics_collector.py`
-6. Click **Deploy**
+3. Click **Create function**
+4. In the **Code** tab, delete the default code and paste in everything from `lambda/metrics_collector.py`
+5. Click **Deploy**
 
-**Increase the timeout** (the default 3s may be too short when CloudWatch is slow):
-- Configuration tab → General configuration → Edit → Timeout: **10 seconds** → Save
+One thing worth changing right away — bump the timeout. The default is 3 seconds and CloudWatch can occasionally be slow to respond. Go to **Configuration → General configuration → Edit**, set the timeout to **10 seconds**, and save.
 
 ---
 
@@ -129,28 +126,28 @@ Lambda needs permission to read CloudWatch metrics. Do this once in the AWS Cons
 
 1. Go to **API Gateway → Create API → REST API → Build**
 2. API name: `CloudMetricsAPI` → **Create API**
-3. In the API, click **Actions → Create Resource**
-   - Resource name: `metrics` → **Create resource**
-4. With `/metrics` selected: **Actions → Create Method → GET → ✓**
+3. Click **Create Resource**, name it `metrics`, click **Create resource**
+4. With `/metrics` selected, click **Create Method → GET**:
    - Integration type: **Lambda Function**
-   - Lambda proxy integration: **✓ enabled** (sends full request to Lambda)
+   - Turn on **Lambda proxy integration** — this is important, it passes the full request object to Lambda
    - Lambda function: `metrics-collector`
-   - Click **Save** → **OK** to grant permission
-5. **Actions → Deploy API**
-   - Deployment stage: **[New Stage]** → Stage name: `prod` → **Deploy**
-6. Copy the **Invoke URL** shown at the top (looks like `https://abc123.execute-api.us-east-1.amazonaws.com/prod`)
+   - Save → OK when it asks about permissions
+5. Click **Deploy API** → New stage → Stage name: `prod` → **Deploy**
+6. Copy the **Invoke URL** at the top of the page — it looks like `https://abc123.execute-api.us-east-1.amazonaws.com/prod`
+
+Quick sanity check: paste `your-invoke-url/prod/metrics` into a browser tab. You should see raw JSON. If you do, the backend is working.
 
 ---
 
 ### Step 4 — Connect Frontend to API Gateway
 
-Open `frontend/app.js` and update line 17:
+Open `frontend/app.js` and update the API endpoint on line 17:
 
 ```js
-// Before:
+// Change this:
 const API_ENDPOINT = "YOUR_API_GATEWAY_URL/metrics";
 
-// After (use your actual Invoke URL from Step 3):
+// To your actual URL from Step 3:
 const API_ENDPOINT = "https://abc123.execute-api.us-east-1.amazonaws.com/prod/metrics";
 ```
 
@@ -158,36 +155,35 @@ const API_ENDPOINT = "https://abc123.execute-api.us-east-1.amazonaws.com/prod/me
 
 ### Step 5 — Deploy Frontend to S3
 
-Run the deployment script (Git Bash or WSL on Windows):
+Pick a bucket name (has to be globally unique across all of AWS — something specific works better than something generic) and run the deploy script from Git Bash:
 
 ```bash
-# First time — creates bucket and uploads all files
-BUCKET=my-cloudmetrics-dashboard-2025 REGION=us-east-1 ./scripts/deploy.sh
+BUCKET=your-bucket-name REGION=us-east-1 ./scripts/deploy.sh
+```
 
-# After editing app.js — re-upload just the changed file
-aws s3 cp frontend/app.js s3://YOUR_BUCKET_NAME/app.js \
+The script creates the bucket, configures it for static website hosting, and uploads all the frontend files. When it finishes it prints the URL:
+
+```
+http://your-bucket-name.s3-website-us-east-1.amazonaws.com
+```
+
+If you need to re-upload `app.js` after changing it:
+
+```bash
+aws s3 cp frontend/app.js s3://your-bucket-name/app.js \
   --content-type "application/javascript; charset=utf-8" \
   --cache-control "no-cache"
 ```
-
-The script prints your website URL when done:
-```
-http://my-cloudmetrics-dashboard-2025.s3-website-us-east-1.amazonaws.com
-```
-
-Open that URL in a browser to see the live dashboard.
 
 ---
 
 ### Step 6 — Generate Traffic (Optional)
 
-Run the simulator to populate CloudWatch with real Lambda invocation data:
+The Lambda metrics panel shows real CloudWatch data, but if the function has barely been invoked the numbers will be low. The simulator script hits the API repeatedly and pushes custom metrics so the dashboard has something interesting to show:
 
 ```bash
-# Install requests (only needed for --push-cloudwatch flag; base script uses stdlib)
 pip install boto3
 
-# Send 30 requests, 1 per second, and push custom CloudWatch metrics
 python scripts/simulate_metrics.py \
   --endpoint https://abc123.execute-api.us-east-1.amazonaws.com/prod/metrics \
   --count 30 \
@@ -195,41 +191,23 @@ python scripts/simulate_metrics.py \
   --push-cloudwatch
 ```
 
-After running the simulator, wait ~1 minute and refresh the dashboard — the Lambda invocation count in the bottom panel will update.
+Wait about a minute after running it, then refresh the dashboard — the invocation count will update.
 
 ---
 
 ### Step 7 — View CloudWatch Logs
 
-Every Lambda invocation writes logs automatically. To view them:
+Every time Lambda runs, it logs to CloudWatch automatically. To see the logs:
 
-1. **CloudWatch → Log groups → `/aws/lambda/metrics-collector`**
-2. Click the most recent log stream
-3. You'll see structured log entries from `logger.info()` calls in the function
-
----
-
-## Manual AWS Console Steps (Cannot Be Automated Here)
-
-These require the AWS Console because they involve IAM trust relationships or first-time resource creation:
-
-| # | Step | Why It's Manual |
-|---|---|---|
-| 1 | Create IAM role for Lambda | IAM trust policies require console confirmation |
-| 2 | Create Lambda function | First-time create requires linking the IAM role |
-| 3 | Create API Gateway + resource | Service-to-service permissions need console approval |
-| 4 | Deploy API to a stage | Generates the Invoke URL you paste into app.js |
-| 5 | (Optional) Enable CloudWatch Alarms | Set thresholds for email alerts on high error rate |
-
-Everything else (S3 bucket, file uploads, Lambda code updates) is handled by `deploy.sh`.
+1. Go to **CloudWatch → Log groups → `/aws/lambda/metrics-collector`**
+2. Open the most recent log stream
+3. You'll see the structured output from the `logger.info()` calls in the function
 
 ---
 
-## Testing the Setup
+## Testing
 
-**Test Lambda directly** (before wiring up API Gateway):
-
-In the Lambda Console → Test tab, create a test event with this JSON:
+**Test Lambda before hooking up API Gateway** — go to the Lambda console, open the **Test** tab, create a test event with this payload and run it:
 
 ```json
 {
@@ -239,15 +217,15 @@ In the Lambda Console → Test tab, create a test event with this JSON:
 }
 ```
 
-Expected: Status 200, JSON body with `system_metrics` and `lambda_metrics` keys.
+You should get a green success result with a JSON body containing `system_metrics` and `lambda_metrics`.
 
-**Test API Gateway**:
+**Test API Gateway** — once deployed, hit the endpoint directly:
 
 ```bash
 curl https://YOUR_INVOKE_URL/prod/metrics | python -m json.tool
 ```
 
-**Test the full stack**: Open the S3 website URL in a browser and confirm numbers update every 30 seconds.
+**Test the full stack** — open the S3 website URL and watch the numbers refresh every 30 seconds.
 
 ---
 
@@ -261,6 +239,4 @@ curl https://YOUR_INVOKE_URL/prod/metrics | python -m json.tool
 | CloudWatch | 5 GB logs/month | ~10 MB logs | **$0.00** |
 | **Total** | | | **$0.00** |
 
-
-
-
+---
